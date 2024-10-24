@@ -20,31 +20,28 @@ const storage = new Storage({
 });
 const bucketName = envVars['GCS_BUCKET'];
 
-function validateFields(allowedValues) {
-    return function (req, res, next) {
-        const invalidFields = [];
+function validateFields(allowedValues, req) {
+    const invalidFields = [];
 
-        // Check each field and collect invalid ones
-        for (const [field, allowedSet] of Object.entries(allowedValues)) {
-            if (!allowedSet.includes(req.body[field])) {
-                invalidFields.push({
-                    field,
-                    value: req.body[field],
-                    allowed: allowedSet,
-                });
-            }
+    // Check each field and collect invalid ones
+    for (const [field, allowedSet] of Object.entries(allowedValues)) {
+        if (!req.body.hasOwnProperty(field)) {
+            continue;
         }
-
-        // If there are any invalid fields, return an error
-        if (invalidFields.length > 0) {
-            return res.status(400).json({
-                error: 'Invalid values found',
-                invalidFields
-            });
+        if (allowedSet.includes(req.body[field])) {
+            continue;
         }
+        invalidFields.push({
+            field,
+            value: req.body[field],
+            allowed: allowedSet,
+        });
+    }
 
-        next(); // Proceed if all validations pass
-    };
+    // return invalidFields if any
+    if (invalidFields.length > 0) {
+        return invalidFields;
+    }
 }
 
 function get_and_validate(){
@@ -53,9 +50,12 @@ function get_and_validate(){
         const validationFileBuffer = await downloadFileFromGcs(bucketName, validationFileName);
         const validationString = validationFileBuffer.toString('utf8');
         const validationJson = JSON.parse(validationString);
-        const result = validateFields(validationJson);
-        if (result){
-            return result;
+        const invalidFields = validateFields(validationJson, req);
+        if (invalidFields){
+            return res.status(400).json({
+                error: 'Invalid values found',
+                invalidFields
+            });
         }
         next(); // Proceed if all validations pass
     }
@@ -77,7 +77,7 @@ async function downloadFileFromGcs(bucketName, fileName) {
     });
 }
 
-app.post('/fill_pdf', async (req, res) => {
+app.post('/fill_pdf', get_and_validate(), async (req, res) => {
     let formData = req.body;
 
     // Download the PDF template and validation fields from GCS
@@ -93,7 +93,7 @@ app.post('/fill_pdf', async (req, res) => {
     try {
         const outputPdfBuffer = await fillPdfForm(inputPdfBuffer, formData);
         res.setHeader('Content-Type', 'application/pdf');
-        res.send(outputPdfBuffer);
+        res.end(outputPdfBuffer ,'binary');
     } catch (error) {
         console.error(error);
         res.status(500).send('Error while filling pdf');
@@ -107,7 +107,7 @@ async function fillPdfForm(templateBuffer, fieldValues) {
 
     // Iterate over field values
     for (const [fieldName, value] of Object.entries(fieldValues)) {
-        if (value === ""){
+        if (value === "" || value === null){
             continue;
         }
 
@@ -130,7 +130,24 @@ async function fillPdfForm(templateBuffer, fieldValues) {
     // return pdfBytesOutput
 }
 
-const PORT = process.env.PORT || 8080;
+const PORT = envVars.HOSTPORT || 8080;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+// const fields = {
+//     "insurance_type": "Champva",
+//     "lab": "NO",
+//     "tax_id_type": "SSN",
+//     "assignment": "YES",
+//     "pt_sex": "M",
+//
+//     "insurance_name": "Insurance Name",
+// }
+// const templatePath = "./CMS1500_radios.pdf"
+// const fs = require('fs')
+// const templatePdfBuffer = fs.readFileSync(templatePath);
+// fillPdfForm(templatePdfBuffer, fields).then(result=>{
+//     fs.writeFileSync('./example.pdf', result);
+// }).catch(err=>console.error(err));
+

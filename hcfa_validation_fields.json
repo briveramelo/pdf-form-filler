@@ -1,0 +1,13 @@
+{
+  "insurance_type": ["Medicare", "Medicaid", "Tricare", "Champva", "Group", "Feca", "Other", ""],
+  "rel_to_ins": ["Self", "Spouse", "Child", "Other", ""],
+  "employment": ["YES", "NO", ""],
+  "pt_auto_accident": ["YES", "NO", ""],
+  "other_accident": ["YES", "NO", ""],
+  "ins_sex": ["M", "F", ""],
+  "ins_benefit_plan": ["YES", "NO", ""],
+  "lab": ["YES", "NO", ""],
+  "tax_id_type": ["SSN", "EIN", ""],
+  "assignment": ["YES", "NO", ""],
+  "pt_sex": ["M", "F", ""]
+}

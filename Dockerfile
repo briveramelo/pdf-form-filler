@@ -2,7 +2,7 @@
 FROM node:16-alpine
 
 WORKDIR /usr/src/app
-COPY package.json package-lock.json .env main.js LICENSE ./
+COPY package.json package-lock.json .env main.mjs LICENSE ./
 RUN npm install --only=production
 EXPOSE 8080
 CMD [ "node", "main" ]

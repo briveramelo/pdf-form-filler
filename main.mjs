@@ -1,8 +1,8 @@
-const { PDFDocument } = require('pdf-lib');
-const express = require('express');
-const { Storage } = require('@google-cloud/storage');
-const dotenv = require('dotenv');
-const stream = require('stream');
+import { PDFDocument } from 'pdf-lib';
+import express from 'express';
+import { Storage } from '@google-cloud/storage';
+import dotenv from 'dotenv';
+import stream from 'stream';
 
 // Load environment variables
 dotenv.config();
@@ -104,9 +104,16 @@ async function fillPdfForm(templateBuffer, fieldValues) {
     // const templatePdfBuffer = fs.readFileSync(templatePath);
     const pdfDoc = await PDFDocument.load(templateBuffer);
     const form = pdfDoc.getForm();
+    // const fieldNames = form.getFields().map(field => field.getName());
+    // console.log(JSON.stringify(fieldNames, null, 2));
+    // console.log("Available fields in PDF:", fieldNames);
+    // return;
 
     // Iterate over field values
-    for (const [fieldName, value] of Object.entries(fieldValues)) {
+    const keys = Object.keys(fieldValues);
+    for (var i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const value = fieldValues[key];
         if (value === "" || value === null){
             continue;
         }
@@ -114,20 +121,17 @@ async function fillPdfForm(templateBuffer, fieldValues) {
         try {
             const isRadioButton = (field) => {return form.getField(field).constructor.name === 'PDFRadioGroup';};
 
-            if (isRadioButton(fieldName)) {
-                form.getRadioGroup(fieldName).select(value);
+            if (isRadioButton(key)) {
+                form.getRadioGroup(key).select(value);
             } else {
-                form.getTextField(fieldName).setText(value);
+                form.getTextField(key).setText(value);
             }
         } catch (error) {
-            console.error(`Could not find field "${fieldName}": ${error.message}`);
+            console.error(`Could not find field "${key}": ${error.message}`);
         }
     }
 
-    // const pdfBytesOutput = await pdfDoc.save();
     return await pdfDoc.save();
-    // fs.writeFileSync(outputPath, pdfBytesOutput);
-    // return pdfBytesOutput
 }
 
 const PORT = envVars.HOSTPORT || 8080;
@@ -135,19 +139,9 @@ app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
-// const fields = {
-//     "insurance_type": "Champva",
-//     "lab": "NO",
-//     "tax_id_type": "SSN",
-//     "assignment": "YES",
-//     "pt_sex": "M",
-//
-//     "insurance_name": "Insurance Name",
-// }
-// const templatePath = "./CMS1500_radios.pdf"
-// const fs = require('fs')
+// const fields = JSON.parse(fs.readFileSync('sample_fields.json', 'utf8'));
+// const templatePath = "./CMS1500_radios.pdf";
+// import fs from 'fs';
 // const templatePdfBuffer = fs.readFileSync(templatePath);
-// fillPdfForm(templatePdfBuffer, fields).then(result=>{
-//     fs.writeFileSync('./example.pdf', result);
-// }).catch(err=>console.error(err));
-
+// const result = await fillPdfForm(templatePdfBuffer, fields);
+// fs.writeFileSync('./example2.pdf', result);

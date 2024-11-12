@@ -101,13 +101,8 @@ app.post('/fill_pdf', get_and_validate(), async (req, res) => {
 });
 
 async function fillPdfForm(templateBuffer, fieldValues) {
-    // const templatePdfBuffer = fs.readFileSync(templatePath);
     const pdfDoc = await PDFDocument.load(templateBuffer);
     const form = pdfDoc.getForm();
-    // const fieldNames = form.getFields().map(field => field.getName());
-    // console.log(JSON.stringify(fieldNames, null, 2));
-    // console.log("Available fields in PDF:", fieldNames);
-    // return;
 
     // Iterate over field values
     const keys = Object.keys(fieldValues);
@@ -134,6 +129,15 @@ async function fillPdfForm(templateBuffer, fieldValues) {
     return await pdfDoc.save();
 }
 
+async function printFormFieldNames() {
+    const templatePdfName = envVars['TEMPLATE_PDF_FILE_NAME'];
+    const inputPdfBuffer = await downloadFileFromGcs(bucketName, templatePdfName);
+    const pdfDoc = await PDFDocument.load(inputPdfBuffer);
+    const form = pdfDoc.getForm();
+    const fieldNames = form.getFields().map(field => field.getName());
+    console.log("Available fields in PDF:", JSON.stringify(fieldNames, null, 2));
+}
+
 const PORT = envVars.HOSTPORT || 8080;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
@@ -145,3 +149,5 @@ app.listen(PORT, () => {
 // const templatePdfBuffer = fs.readFileSync(templatePath);
 // const result = await fillPdfForm(templatePdfBuffer, fields);
 // fs.writeFileSync('./example2.pdf', result);
+
+// printFormFieldNames()

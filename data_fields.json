@@ -11,11 +11,13 @@
   "assignment": "",
   "pt_sex": "",
 
+  "insurance_id": "",
   "insurance_name": "",
   "insurance_address": "",
   "insurance_address2": "",
   "insurance_city_state_zip": "",
 
+  "pt_AreaCode": "",
   "pt_name": "",
   "pt_street": "",
   "pt_city": "",

@@ -20,20 +20,20 @@ const storage = new Storage({
 });
 const bucketName = envVars['GCS_BUCKET'];
 
-function validateFields(allowedValues, req) {
+function validateFields(allowedValues, formData) {
     const invalidFields = [];
 
     // Check each field and collect invalid ones
     for (const [field, allowedSet] of Object.entries(allowedValues)) {
-        if (!req.body.hasOwnProperty(field)) {
+        if (!formData.hasOwnProperty(field)) {
             continue;
         }
-        if (allowedSet.includes(req.body[field])) {
+        if (allowedSet.includes(formData[field])) {
             continue;
         }
         invalidFields.push({
             field,
-            value: req.body[field],
+            value: formData[field],
             allowed: allowedSet,
         });
     }
@@ -50,7 +50,8 @@ function get_and_validate(){
         const validationFileBuffer = await downloadFileFromGcs(bucketName, validationFileName);
         const validationString = validationFileBuffer.toString('utf8');
         const validationJson = JSON.parse(validationString);
-        const invalidFields = validateFields(validationJson, req);
+        const { formData } = req.body;
+        const invalidFields = validateFields(validationJson, formData);
         if (invalidFields){
             return res.status(400).json({
                 error: 'Invalid values found',
@@ -78,7 +79,7 @@ async function downloadFileFromGcs(bucketName, fileName) {
 }
 
 app.post('/fill_pdf', get_and_validate(), async (req, res) => {
-    let formData = req.body;
+    const { formData, flattenFields } = req.body; // Separate formData and flattenFields
 
     // Download the PDF template and validation fields from GCS
     let inputPdfBuffer;
@@ -91,16 +92,16 @@ app.post('/fill_pdf', get_and_validate(), async (req, res) => {
 
     // Fill PDF form
     try {
-        const outputPdfBuffer = await fillPdfForm(inputPdfBuffer, formData);
+        const filledPdfBuffer = await fillPdfForm(inputPdfBuffer, formData, flattenFields);
         res.setHeader('Content-Type', 'application/pdf');
-        res.end(outputPdfBuffer ,'binary');
+        res.end(filledPdfBuffer ,'binary');
     } catch (error) {
         console.error(error);
         res.status(500).send('Error while filling pdf');
     }
 });
 
-async function fillPdfForm(templateBuffer, fieldValues) {
+async function fillPdfForm(templateBuffer, fieldValues, flatten) {
     const pdfDoc = await PDFDocument.load(templateBuffer);
     const form = pdfDoc.getForm();
 
@@ -125,7 +126,10 @@ async function fillPdfForm(templateBuffer, fieldValues) {
             console.error(`Could not find field "${key}": ${error.message}`);
         }
     }
-
+    //flatten the form so it's no longer editable
+    if(flatten){
+        form.getFields().forEach(field => field.enableReadOnly());
+    }
     return await pdfDoc.save();
 }
 
@@ -137,6 +141,7 @@ async function printFormFieldNames() {
     const fieldNames = form.getFields().map(field => field.getName());
     console.log("Available fields in PDF:", JSON.stringify(fieldNames, null, 2));
 }
+
 
 const PORT = envVars.HOSTPORT || 8080;
 app.listen(PORT, () => {

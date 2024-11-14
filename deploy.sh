@@ -10,4 +10,5 @@ gcloud run deploy pdf-form-filler \
     --image "${IMAGE_NAME}" \
     --platform managed \
     --region "${REGION}" \
-    --allow-unauthenticated
+    --allow-unauthenticated \
+    --set-env-vars "$(grep -v '^#' .env | xargs | sed 's/ /,/g')"

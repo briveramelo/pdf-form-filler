@@ -53,6 +53,7 @@ function get_and_validate(){
         const { formData } = req.body;
         const invalidFields = validateFields(validationJson, formData);
         if (invalidFields){
+            console.error(`Invalid values found: ${invalidFields}`)
             return res.status(400).json({
                 error: 'Invalid values found',
                 invalidFields
@@ -87,6 +88,7 @@ app.post('/fill_pdf', get_and_validate(), async (req, res) => {
         const templatePdfName = envVars['TEMPLATE_PDF_FILE_NAME'];
         inputPdfBuffer = await downloadFileFromGcs(bucketName, templatePdfName);
     } catch (error) {
+        console.error(error);
         return res.status(500).send('Error while downloading pdf template');
     }
 
